@@ -3,9 +3,13 @@ import 'package:provider/provider.dart';
 
 import 'providers/app_theme_provider.dart';
 import 'providers/telegram_data_provider.dart';
+import 'services/supabase_service.dart';
 import 'views/chat_list/chat_list_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseService.initialize();
+
   runApp(
     MultiProvider(
       providers: [

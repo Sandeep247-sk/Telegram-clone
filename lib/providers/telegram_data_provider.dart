@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../models/chat_model.dart';
 import '../models/message_model.dart';
+import '../services/supabase_service.dart';
 
 class TelegramDataProvider extends ChangeNotifier {
   late User currentUser;
@@ -15,6 +16,15 @@ class TelegramDataProvider extends ChangeNotifier {
 
   TelegramDataProvider() {
     _initMockData();
+    _loadFromSupabase();
+  }
+
+  Future<void> _loadFromSupabase() async {
+    final remoteChats = await SupabaseService.fetchChats();
+    if (remoteChats != null && remoteChats.isNotEmpty) {
+      chats = remoteChats;
+      notifyListeners();
+    }
   }
 
   void _initMockData() {
@@ -406,6 +416,9 @@ class TelegramDataProvider extends ChangeNotifier {
 
     notifyListeners();
 
+    // Async sync to Supabase
+    SupabaseService.sendMessage(newMessage);
+
     // Simulated Auto-Reply for bots or specific contacts
     _simulateResponse(chatId, text);
   }
@@ -462,6 +475,9 @@ class TelegramDataProvider extends ChangeNotifier {
       }
 
       notifyListeners();
+
+      // Async sync to Supabase
+      SupabaseService.sendMessage(replyMsg);
     });
   }
 
@@ -554,6 +570,9 @@ class TelegramDataProvider extends ChangeNotifier {
     chatMessages[newChat.id] = [];
 
     notifyListeners();
+
+    // Async sync to Supabase
+    SupabaseService.createChat(newChat);
   }
 
   void createGroup(String groupName, List<User> selectedMembers) {
@@ -583,5 +602,9 @@ class TelegramDataProvider extends ChangeNotifier {
     newChat.lastMessage = chatMessages[newChat.id]!.first;
 
     notifyListeners();
+
+    // Async sync to Supabase
+    SupabaseService.createChat(newChat);
+    SupabaseService.sendMessage(newChat.lastMessage!);
   }
 }
