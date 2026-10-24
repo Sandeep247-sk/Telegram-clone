@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE TABLE IF NOT EXISTS public.chats (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL DEFAULT 'private', -- private, group, channel, secret
+  type TEXT NOT NULL DEFAULT 'private',
   avatar_url TEXT,
   subtitle TEXT,
   folder_category TEXT DEFAULT 'Personal',
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   timestamp TIMESTAMPTZ DEFAULT NOW(),
   is_sent_by_me BOOLEAN DEFAULT true,
   is_read BOOLEAN DEFAULT false,
-  message_type TEXT DEFAULT 'text', -- text, voice, image, file, poll
+  message_type TEXT DEFAULT 'text',
   voice_duration TEXT,
   media_url TEXT,
   file_name TEXT,
@@ -49,15 +49,33 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Enable Row Level Security (RLS) & Public Policies for Demo
+-- 4. Enable Row Level Security (RLS) & Policies
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read/write on profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow public read/write on chats" ON public.chats;
+DROP POLICY IF EXISTS "Allow public read/write on messages" ON public.messages;
 
 CREATE POLICY "Allow public read/write on profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write on chats" ON public.chats FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public read/write on messages" ON public.messages FOR ALL USING (true) WITH CHECK (true);
 
--- 5. Enable Realtime Publications for Messages & Chats
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.chats;
+-- 5. Enable Realtime Publications
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'chats'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chats;
+  END IF;
+END $$;
